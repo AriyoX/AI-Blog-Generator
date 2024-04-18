@@ -10,8 +10,16 @@ import os
 from pytube import YouTube
 import assemblyai as aai
 import openai
+import pathlib
+import textwrap
+import google.generativeai as genai
+from IPython.display import display
+from IPython.display import Markdown
 
 # Create your views here.
+GOOGLE_API_KEY= ""
+
+
 @login_required
 def index(request):
     return render(request, 'index.html')
@@ -67,14 +75,17 @@ def get_transcription(link):
     transcript = transcriber.transcribe(audio_file)
     return transcript.text
 
+def to_markdown(text):
+  text = text.replace('•', '  *')
+  return Markdown(textwrap.indent(text, '> ', predicate=lambda _: True))
+
 def generate_blog_from_transcription(transcription):
-    openai.api_key = "sk-proj-oYCvAz5EInQw7XDhyQBAT3BlbkFJjfBGOaaemfouqS5rn1Yd"
-    prompt = f"Based on the following transcript from a youtube video, write a comprehensive blog article. write it based on the transcript, but do not make it look like a youtube video, make it look like a proper blog article:\n\n{transcription}\n\nArticle:"
-    response = openai.Completion.create(
-        model="text-davinci-003",
-        prompt=prompt,
-        max_tokens=1000,
-    )
+    genai.configure(api_key=GOOGLE_API_KEY)
+    model = genai.GenerativeModel('gemini-pro')
+    transcript = "I know how to make tea, it takes a variety of steps, ranging from putting the bag of tea into water to strring and adding sugar"
+    prompt = f"Based on the following transcript from a youtube video, write a comprehensive blog article. write it based on the transcript, but do not make it look like a youtube video, make it look like a proper blog article. Do not add any text styles to the content you produce:\n\n{transcript}\n\nArticle:"
+    response = model.generate_content(prompt)
+    response.resolve()
     generated_content = response.choices[0].text.strip()
     return generated_content
 
