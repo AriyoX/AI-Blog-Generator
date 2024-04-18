@@ -17,9 +17,6 @@ from IPython.display import display
 from IPython.display import Markdown
 
 # Create your views here.
-GOOGLE_API_KEY= ""
-
-
 @login_required
 def index(request):
     return render(request, 'index.html')
@@ -42,7 +39,7 @@ def generate_blog(request):
         if not transcription:
             return JsonResponse({'error':"Failed to get transcript"}, status=500)
         
-        # use openAI to generate blog
+        # use gemini to generate blog
         blog_content = generate_blog_from_transcription(transcription)
         if not blog_content:
             return JsonResponse({'error':"Failed to generate blog article"}, status=500)
@@ -80,14 +77,17 @@ def to_markdown(text):
   return Markdown(textwrap.indent(text, '> ', predicate=lambda _: True))
 
 def generate_blog_from_transcription(transcription):
+    GOOGLE_API_KEY= "AIzaSyCBek4ojoK-IcYVPlAPxEXNRNtdEO4zVVU"
     genai.configure(api_key=GOOGLE_API_KEY)
     model = genai.GenerativeModel('gemini-pro')
-    transcript = "I know how to make tea, it takes a variety of steps, ranging from putting the bag of tea into water to strring and adding sugar"
+    transcript = transcription
     prompt = f"Based on the following transcript from a youtube video, write a comprehensive blog article. write it based on the transcript, but do not make it look like a youtube video, make it look like a proper blog article. Do not add any text styles to the content you produce:\n\n{transcript}\n\nArticle:"
-    response = model.generate_content(prompt)
-    response.resolve()
-    generated_content = response.choices[0].text.strip()
-    return generated_content
+    try:
+      response = model.generate_content(prompt)
+      generated_content = response.text
+      return generated_content
+    except Exception as e:
+        return JsonResponse({'error':"Failed to generate blog article"}, status=500)
 
 def user_login(request):
     if request.method == 'POST':
