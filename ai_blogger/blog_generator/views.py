@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.conf import settings
+from .models import BlogPost
 import json
 import os
 from pytube import YouTube
@@ -45,6 +46,13 @@ def generate_blog(request):
             return JsonResponse({'error':"Failed to generate blog article"}, status=500)
         
         # save blog article to database
+        new_blog_article = BlogPost.objects.create(
+            user = request.user,
+            youtube_title = title,
+            youtube_link = yt_link,
+            generated_content = blog_content,
+        )
+        new_blog_article.save()
 
         # return blog article as response
         return JsonResponse({'content':blog_content})
@@ -88,6 +96,15 @@ def generate_blog_from_transcription(transcription):
       return generated_content
     except Exception as e:
         return JsonResponse({'error':"Failed to generate blog article"}, status=500)
+
+def blog_list(request):
+    blog_articles = BlogPost.objects.filter(user=request.user)
+    return render(request, "all-blogs.html", { 'blog_articles' : blog_articles })
+
+def blog_details(request, pk):
+    blog_article_detail = BlogPost.objects.get(id=pk)
+    if request.user == blog_article_detail.user:
+        return render(request, 'blog-details.html', { 'blog_article_detail' : blog_article_detail })
 
 def user_login(request):
     if request.method == 'POST':
