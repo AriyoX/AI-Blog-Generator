@@ -1,0 +1,4 @@
+in settings.py, add LOGIN_URL for the default login to be handled
+
+AIzaSyCBek4ojoK-IcYVPlAPxEXNRNtdEO4zVVU
+
