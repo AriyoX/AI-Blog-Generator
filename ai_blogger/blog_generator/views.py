@@ -73,6 +73,9 @@ def get_transcription(link):
     aai.settings.api_key = "b94ab9bf90a04767bd7001daf125b57f"
     transcriber = aai.Transcriber()
     transcript = transcriber.transcribe(audio_file)
+    # delete audio file after successful transcription
+    if transcript.text:
+        os.remove(audio_file)
     return transcript.text
 
 def generate_blog_from_transcription(transcription):
