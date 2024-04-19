@@ -13,12 +13,12 @@
     <!-- Navbar -->
     <nav class="bg-blue-600 p-4 text-white flex justify-between">
         <div>
-            <h1 class="text-3xl font-bold">AI Blog Generator</h1>
+            <h1 class="text-3xl font-bold"><a href="{% url 'blog_generator:index' %}">AI Blog Generator</a></h1>
         </div>
         <div>
             <a href="#" class="text-white hover:underline mx-4">Welcome {{ user.username }}</a>
             <a href="/blog-list" class="text-white hover:underline mx-4">Saved Blog Posts</a>
-            <a href="#" class="text-white hover:underline">Logout</a>
+            <a href="{% url 'blog_generator:logout' %}" class="text-white hover:underline">Logout</a>
         </div>
     </nav>
 
@@ -36,6 +36,7 @@
                         <div class="border border-gray-300 p-4 rounded-lg">
                             <h3 class="text-lg font-semibold">{{article.youtube_title}}</h3>
                             <p>{{article.generated_content|truncatechars:80}}</p>
+                            <a href="{% url 'blog_generator:delete' article.id %}" class="inline-block mt-6 py-2 px-4 text-lg font-semibold bg-red-500 hover:bg-red-600 text-white rounded-xl">Delete</a>
                         </div>
                     </a>
                     {% endfor %}

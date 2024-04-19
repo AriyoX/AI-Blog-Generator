@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -80,10 +80,6 @@ def get_transcription(link):
     transcript = transcriber.transcribe(audio_file)
     return transcript.text
 
-def to_markdown(text):
-  text = text.replace('•', '  *')
-  return Markdown(textwrap.indent(text, '> ', predicate=lambda _: True))
-
 def generate_blog_from_transcription(transcription):
     GOOGLE_API_KEY= "AIzaSyCBek4ojoK-IcYVPlAPxEXNRNtdEO4zVVU"
     genai.configure(api_key=GOOGLE_API_KEY)
@@ -146,3 +142,10 @@ def user_signup(request):
 def user_logout(request):
     logout(request)
     return redirect('/')
+
+@login_required
+def delete(request, pk):
+    blogpost = get_object_or_404(BlogPost, pk=pk, user=request.user)
+    blogpost.delete()
+
+    return redirect('blog_generator:blog-list')
