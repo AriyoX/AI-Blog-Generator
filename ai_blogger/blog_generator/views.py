@@ -10,12 +10,7 @@ import json
 import os
 from pytube import YouTube
 import assemblyai as aai
-import openai
-import pathlib
-import textwrap
 import google.generativeai as genai
-from IPython.display import display
-from IPython.display import Markdown
 
 # Create your views here.
 @login_required
@@ -88,7 +83,7 @@ def generate_blog_from_transcription(transcription):
     prompt = f"Based on the following transcript from a youtube video, write a comprehensive blog article. write it based on the transcript, but do not make it look like a youtube video, make it look like a proper blog article. Do not add any text styles to the content you produce:\n\n{transcript}\n\nArticle:"
     try:
       response = model.generate_content(prompt)
-      generated_content = response.text
+      generated_content = response.text.replace("*", "")
       return generated_content
     except Exception as e:
         return JsonResponse({'error':"Failed to generate blog article"}, status=500)
