@@ -1,4 +1,4 @@
-import time
+from django.core.cache import cache
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
@@ -10,7 +10,6 @@ from .models import BlogPost
 import json
 import os
 import re
-from urllib.error import HTTPError, URLError
 from pytube import YouTube
 import assemblyai as aai
 from dotenv import load_dotenv
@@ -25,62 +24,101 @@ def index(request):
     return render(request, 'index.html')
 
 @csrf_exempt
+def check_progress(request):
+    if request.method == 'GET':
+        # Get the progress from cache using the user's session ID
+        progress_key = f'progress_{request.session.session_key}'
+        progress_data = cache.get(progress_key) or {
+            'status': 'processing',
+            'progress': 0,
+            'message': 'Starting process...'
+        }
+        return JsonResponse(progress_data)
+
+def update_progress(request, progress, message, status='processing'):
+    progress_key = f'progress_{request.session.session_key}'
+    progress_data = {
+        'status': status,
+        'progress': progress,
+        'message': message
+    }
+    cache.set(progress_key, progress_data, timeout=300)
+    progress_key = f'progress_{request.session.session_key}'
+    cache.set(progress_key, {
+        'status': status,
+        'progress': progress,
+        'message': message
+    }, timeout=300)
+
+@csrf_exempt
 def generate_blog(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             raw_link = data['link'].strip()
             
+            # Send first progress update
+            update_progress(request, 10, 'Validating YouTube URL...')
+            
             # Normalize YouTube URL
             if 'youtu.be/' in raw_link:
                 video_id = raw_link.split('/')[-1]
                 yt_link = f'https://youtube.com/watch?v={video_id}'
             else:
-                yt_link = raw_link.split('&')[0]  # Remove extra parameters
+                yt_link = raw_link.split('&')[0]
 
-            # Validate URL format more flexibly
             if not re.search(r'youtube\.com/watch\?v=|youtu\.be/', yt_link):
                 return JsonResponse({
                     'error': 'Invalid YouTube URL. Please provide a full YouTube video link.'
                 }, status=400)
 
-        except Exception as e:
-            return JsonResponse({'error': 'Invalid data sent'}, status=400)
-        
-        # Get title with comprehensive error handling
-        title = yt_title(yt_link)
-        if not title:
+            # Update progress - getting title
+            update_progress(request, 25, 'Fetching video title...')
+            
+            title = yt_title(yt_link)
+            if not title:
+                return JsonResponse({
+                    'error': 'Failed to fetch video title...'
+                }, status=400)
+
+            # Update progress - getting transcript
+            update_progress(request, 50, 'Downloading and transcribing audio...')
+            
+            transcription = get_transcription(yt_link)
+            if not transcription:
+                return JsonResponse({'error': "Failed to get transcript"}, status=500)
+
+            # Update progress - generating blog
+            update_progress(request, 75, 'Generating blog content...')
+            
+            blog_content = generate_blog_from_transcription(transcription)
+            if blog_content is None:
+                return JsonResponse({'error': "Failed to generate blog article"}, status=500)
+
+            # Save blog article
+            new_blog_article = BlogPost.objects.create(
+                user=request.user,
+                youtube_title=title,
+                youtube_link=yt_link,
+                generated_content=blog_content,
+            )
+            new_blog_article.save()
+
+            # Update progress - complete
+            update_progress(request, 100, 'Complete', status='complete')
+
+            # Return final content with formatted blog
             return JsonResponse({
-                'error': 'Failed to fetch video title. Possible reasons:\n'
-                         '- Invalid or private video\n'
-                         '- Video might be age-restricted\n'
-                         '- Temporary YouTube API issues\n'
-                         '- Network connectivity problems'
-            }, status=400)
+                'status': 'complete',
+                'progress': 100,
+                'title': title,
+                'content': blog_content
+            })
 
-        # get transcript
-        transcription = get_transcription(yt_link)
-        if not transcription:
-            return JsonResponse({'error':"Failed to get transcript"}, status=500)
-        
-        # use mistral to generate blog
-        blog_content = generate_blog_from_transcription(transcription)
-        if not blog_content:
-            return JsonResponse({'error':"Failed to generate blog article"}, status=500)
-        
-        # save blog article to database
-        new_blog_article = BlogPost.objects.create(
-            user = request.user,
-            youtube_title = title,
-            youtube_link = yt_link,
-            generated_content = blog_content,
-        )
-        new_blog_article.save()
-
-        # return blog article as response
-        return JsonResponse({'content':blog_content})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
     else:
-        return JsonResponse({'error':'Invalid request method'}, status=405)
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 def normalize_youtube_url(raw_link):
     """
@@ -102,7 +140,6 @@ def normalize_youtube_url(raw_link):
     
     return None
   
-
 def yt_title(link):
     try:
         # Try pytube first
@@ -163,13 +200,24 @@ def download_audio(link):
 
 def get_transcription(link):
     audio_file = download_audio(link)
-    aai.settings.api_key = os.environ.get('ASSEMBLYAI_API_KEY')
-    transcriber = aai.Transcriber()
-    transcript = transcriber.transcribe(audio_file)
-    # delete audio file after successful transcription
-    if transcript.text:
-        os.remove(audio_file)
-    return transcript.text
+    if not audio_file:
+        return None
+        
+    try:
+        aai.settings.api_key = os.environ.get('ASSEMBLYAI_API_KEY')
+        transcriber = aai.Transcriber()
+        transcript = transcriber.transcribe(audio_file)
+        return transcript.text
+    except Exception as e:
+        print(f"Error during transcription: {e}")
+        return None
+    finally:
+        # Always try to delete the audio file
+        if os.path.exists(audio_file):
+            try:
+                os.remove(audio_file)
+            except Exception as e:
+                print(f"Error deleting audio file: {e}")
 
 def generate_blog_from_transcription(transcription):
     api_key = os.environ.get("MISTRAL_API_KEY")
@@ -178,20 +226,20 @@ def generate_blog_from_transcription(transcription):
     transcript = transcription
     prompt = f"Based on the following transcript from a youtube video, write a comprehensive blog article. write it based on the transcript, but do not make it look like a youtube video, make it look like a proper blog article. Do not add any text styles to the content you produce:\n\n{transcript}\n\nArticle:"
     try:
-      response = client.chat.complete(
-        model=model,
-        messages=[
-            {
-                "role": "user",
-                "content": prompt,
-            },
-        ]
-      )
-      response = response.choices[0].message.content
-      generated_content = response.text.replace("*", "")
-      return generated_content
+        response = client.chat.complete(
+            model=model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ]
+        )
+        generated_content = response.choices[0].message.content.replace("*", "")
+        return generated_content
     except Exception as e:
-        return JsonResponse({'error':"Failed to generate blog article"}, status=500)
+        print(f"Error generating blog: {e}")  # Add logging for debugging
+        return None  # Return None instead of JsonResponse
 
 def blog_list(request):
     blog_articles = BlogPost.objects.filter(user=request.user)

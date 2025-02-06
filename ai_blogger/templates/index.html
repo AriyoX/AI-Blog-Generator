@@ -7,145 +7,259 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 
     <style>
+        /* Loading animation */
         @keyframes rotate {
-            from {
-                transform: rotate(0deg);
-            }
-            to { 
-                transform: rotate(360deg);
-            }
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
          
-        
-         @-webkit-keyframes rotate {
-            from {
-                -webkit-transform: rotate(0deg);
-            }
-            to { 
-                -webkit-transform: rotate(360deg);
-            }
+        @-webkit-keyframes rotate {
+            from { -webkit-transform: rotate(0deg); }
+            to { -webkit-transform: rotate(360deg); }
         }
         
         .load {
             width: 100px;
             height: 100px;
             margin: 110px auto 0;
-            border:solid 10px #8822aa;
+            border: solid 10px #8822aa;
             border-radius: 50%;
             border-right-color: transparent;
             border-bottom-color: transparent;
-             -webkit-transition: all 0.5s ease-in;
-            -webkit-animation-name:             rotate; 
-            -webkit-animation-duration:         1.0s; 
-            -webkit-animation-iteration-count:  infinite;
-            -webkit-animation-timing-function: linear;
-                
-                 transition: all 0.5s ease-in;
-            animation-name:             rotate; 
-            animation-duration:         1.0s; 
-            animation-iteration-count:  infinite;
-            animation-timing-function: linear; 
+            -webkit-transition: all 0.5s ease-in;
+            -webkit-animation: rotate 1.0s infinite linear;
+            transition: all 0.5s ease-in;
+            animation: rotate 1.0s infinite linear;
+        }
+
+        /* Progress bar styles */
+        .progress-container {
+            width: 100%;
+            background-color: #f0f0f0;
+            border-radius: 8px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 20px;
+            background-color: #4299e1;
+            border-radius: 8px;
+            transition: width 0.3s ease;
+        }
+
+        /* Blog content formatting */
+        .blog-content {
+            line-height: 1.8;
+            font-size: 1.1rem;
+            color: #2d3748;
+        }
+
+        .blog-content p {
+            margin-bottom: 1.5rem;
+            text-align: justify;
+        }
+
+        .blog-content h1, 
+        .blog-content h2, 
+        .blog-content h3 {
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            color: #1a202c;
+        }
+
+        .blog-title {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+            color: #2d3748;
+            text-align: center;
+        }
+
+        /* Status message styling */
+        .status-message {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .status-message.info {
+            background-color: #ebf8ff;
+            color: #2b6cb0;
+        }
+
+        .status-message.error {
+            background-color: #fff5f5;
+            color: #c53030;
         }
     </style>
 </head>
-<body class="flex flex-col min-h-scrren bg-gray-100 font-sans antialised">
+<body class="flex flex-col min-h-screen bg-gray-100 font-sans antialiased">
     <!-- Navbar -->
-    <nav class="bg-blue-600 p-4 text-white flex justify-between">
+    <nav class="bg-blue-600 p-4 text-white flex justify-between items-center">
         <div>
             <h1 class="text-3xl font-bold">AI Blog Generator</h1>
         </div>
-        <div>
-            <a href="#" class="text-white hover:underline mx-4">Welcome {{ user.username }}</a>
+        <div class="flex items-center">
+            <span class="text-white mx-4">Welcome {{ user.username }}</span>
             <a href="{% url 'blog_generator:blog-list' %}" class="text-white hover:underline mx-4">Saved Blog Posts</a>
             <a href="{% url 'blog_generator:logout' %}" class="text-white hover:underline">Logout</a>
         </div>
     </nav>
 
-
-    <br>
-    <br>
-
-    <!-- Main -->
-    <div class="flex-grow container mx-auto mt-10 px-4 sm:px-0">
-        <div class="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-md transition-transform transform hover:scale-105 flex flex-col">
-
+    <!-- Main Content -->
+    <div class="flex-grow container mx-auto mt-10 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md">
             <!-- Introduction section -->
-            <div class="text-center">
+            <div class="text-center mb-8">
                 <h2 class="text-2xl font-semibold mb-4">Welcome to the AI Blog Generator</h2>
                 <p class="text-gray-700">
                     Generate high-quality blog articles from YouTube videos using artificial intelligence.
-                    Simply enter the link to the YouTube video below and let the AI create the content for you!
+                    Simply enter the YouTube video link below and let the AI create the content for you!
                 </p>
             </div>
 
-            <br>
-
-            <!-- Youtube section -->
-            <div>
-                <h2 class="text-xl mb-4 font-semibold">Enter Youtube Video Link</h2>
+            <!-- YouTube input section -->
+            <div class="mb-8">
+                <h2 class="text-xl mb-4 font-semibold">Enter YouTube Video Link</h2>
                 <div class="flex space-x-4">
-                    <input id="youtubeLink" type="url" placeholder="Paste Youtube Link..." class="flex-grow p-2 border border-blue-400 rounded-l-md">
-                    <button id="generateBlogButton" class="bg-blue-600 text-white px-4 py-2 rounded-r-md hover:bg-blue-700 transition-colors">Generate</button>
+                    <input id="youtubeLink" type="url" 
+                           placeholder="Paste YouTube Link..." 
+                           class="flex-grow p-3 border border-blue-400 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button id="generateBlogButton" 
+                            class="bg-blue-600 text-white px-6 py-3 rounded-r-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        Generate
+                    </button>
                 </div>
             </div>
 
-
-            <!-- section for loading circle -->
-            <div style="display: none;" id="loading-circle" class="load"></div>
-
-
-            <!-- Generated Blog Display Section -->
-            <section class="mt-10 flex-grow">
-                <h2 class="text-xl mb-4 font-semibold">Generated Blog Article</h2>
-                <div id="blogContent" class="mt-2 text-gray-700 space-y-4">
-                    
+            <!-- Progress section -->
+            <div id="progress-section" class="mb-8" style="display: none;">
+                <div class="progress-container">
+                    <div class="progress-bar" id="progress-bar"></div>
                 </div>
-            </section>
+                <div id="progress-status" class="status-message info"></div>
+            </div>
+
+            <!-- Loading animation -->
+            <div id="loading-circle" class="load" style="display: none;"></div>
+
+            <!-- Blog content section -->
+            <div id="blog-container" class="mt-8">
+                <div id="blogContent" class="blog-content"></div>
+            </div>
         </div>
     </div>
 
-
-    <footer class="text-center p-4 text-blacl mt-6">
-        Powered by <a href="https://twitter.com/AriyoAdventures">ariyoahumuza</a>
+    <!-- Footer -->
+    <footer class="text-center p-6 text-gray-600 mt-8">
+        Powered by <a href="https://ahumuza.com" class="text-blue-600 hover:underline">ariyoahumuza</a>
     </footer>
 
     <script>
         document.getElementById('generateBlogButton').addEventListener('click', async () => {
-            
-
             const youtubeLink = document.getElementById('youtubeLink').value;
             const blogContent = document.getElementById('blogContent');
+            const progressSection = document.getElementById('progress-section');
+            const progressBar = document.getElementById('progress-bar');
+            const progressStatus = document.getElementById('progress-status');
+            const loadingCircle = document.getElementById('loading-circle');
             
-            if(youtubeLink) {
-                document.getElementById('loading-circle').style.display = 'block';
-                
-                blogContent.innerHTML = ''; // Clear previous content
-
-                const endpointUrl = '/generate-blog/';
-                
-                try {
-                    const response = await fetch(endpointUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ link: youtubeLink })
-                    });
-
-                    const data = await response.json();
-
-                    blogContent.innerHTML = data.content;
-
-                } catch (error) {
-                    console.error("Error occurred:", error);
-                    alert("Something went wrong. Please try again later.");
-                    
-                }
-                document.getElementById('loading-circle').style.display = 'none';
-            } else {
+            if (!youtubeLink) {
                 alert("Please enter a YouTube link.");
+                return;
+            }
+    
+            // Reset and show progress elements
+            blogContent.innerHTML = '';
+            progressSection.style.display = 'block';
+            loadingCircle.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressStatus.className = 'status-message info';
+            progressStatus.textContent = 'Starting process...';
+    
+            // Start polling immediately
+            pollProgress();
+    
+            try {
+                // Start the blog generation process concurrently
+                const response = await fetch('/generate-blog/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ link: youtubeLink })
+                });
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                if (data.status === 'complete') {
+                    // Format and display the blog content
+                    blogContent.innerHTML = `
+                        <h1 class="blog-title">${data.title}</h1>
+                        <div class="blog-content">
+                            ${formatBlogContent(data.content)}
+                        </div>
+                    `;
+                    // Hide progress elements
+                    progressSection.style.display = 'none';
+                    loadingCircle.style.display = 'none';
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                progressStatus.textContent = `Error: ${error.message}`;
+                progressStatus.className = 'status-message error';
+                loadingCircle.style.display = 'none';
             }
         });
+            
+        function pollProgress() {
+            fetch('/check-progress/', {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.progress !== undefined) {
+                    document.getElementById('progress-bar').style.width = `${data.progress}%`;
+                    document.getElementById('progress-status').textContent = data.message || 'Processing...';
+                }
+                if (data.status !== 'complete') {
+                    setTimeout(pollProgress, 1000); // Poll every second
+                }
+            })
+            .catch(error => {
+                console.error("Error checking progress:", error);
+            });
+        }
+            
+        function formatBlogContent(content) {
+            if (!content) return '';
+            const paragraphs = content.split('\n\n');
+            return paragraphs
+                .map(p => {
+                    p = p.trim();
+                    if (!p) return '';
+                    if (p.startsWith('# ')) {
+                        return `<h1 class="text-3xl font-bold my-4">${p.substring(2)}</h1>`;
+                    } else if (p.startsWith('## ')) {
+                        return `<h2 class="text-2xl font-bold my-3">${p.substring(3)}</h2>`;
+                    } else if (p.startsWith('### ')) {
+                        return `<h3 class="text-xl font-bold my-2">${p.substring(4)}</h3>`;
+                    } else {
+                        return `<p class="mb-4">${p}</p>`;
+                    }
+                })
+                .join('');
+        }
     </script>
+    
 </body>
 </html>
